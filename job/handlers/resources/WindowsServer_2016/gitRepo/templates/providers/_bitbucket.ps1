@@ -34,12 +34,16 @@ Function exec_cmd([string]$cmd) {
 # exec_exe executes an exe program and throws a powershell exception if it fails
 # $ErrorActionPreference = "Stop" catches only cmdlet exceptions
 # Hence exit status of exe programs need to be wrapped and thrown as exception
-Function exec_exe([string]$cmd) {
+Function exec_exe([string]$cmd, [string]$error_msg) {
   $global:LASTEXITCODE = 0;
   Invoke-Expression $cmd
   $ret = $LASTEXITCODE
   if ($ret -ne 0) {
-    $msg = "$cmd exited with $ret"
+    if ($error_msg) {
+      $msg = "$cmd exited with $ret `n$error_msg"
+    } else {
+      $msg = "$cmd exited with $ret"
+    }
     throw $msg
   }
 }
@@ -114,7 +118,7 @@ Function git_sync() {
   }
 
   echo "----> Cloning $PROJECT_CLONE_URL"
-  exec_exe "git clone $PROJECT_CLONE_URL $temp_clone_path"
+  exec_exe "git clone $PROJECT_CLONE_URL $temp_clone_path" "Unable to clone the repository. If this is a private repository, please make sure that the repository still contains Shippable's deploy key. If the deploy key is not present in the repository, you can use the \"Reset Project\" button on the project settings page to restore it."
 
   echo "----> Pushing Directory $temp_clone_path"
   pushd $temp_clone_path

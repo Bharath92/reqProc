@@ -35,7 +35,13 @@ git_sync() {
   chmod 600 $PROJECT_KEY_LOCATION
   git config --global credential.helper store
 
-  shippable_retry ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git clone $PROJECT_CLONE_URL $PROJECT_CLONE_LOCATION"
+  {
+    shippable_retry ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git clone $PROJECT_CLONE_URL $PROJECT_CLONE_LOCATION"
+  } || {
+    ret=$?
+    echo "Unable to clone the repository. If this is a private repository, please make sure that the repository still contains Shippable's deploy key. If the deploy key is not present in the repository, you can use the \"Reset Project\" button on the project settings page to restore it."
+    return $ret
+  }
 
   echo "----> Pushing Directory $PROJECT_CLONE_LOCATION"
   pushd $PROJECT_CLONE_LOCATION
@@ -47,7 +53,13 @@ git_sync() {
   echo "----> Checking out commit SHA"
   if [ "$IS_PULL_REQUEST" != false ]; then
     if [ "$PROJECT_CLONE_URL" != "$PULL_REQUEST_SOURCE_URL" ]; then
-      git remote add PR $PULL_REQUEST_SOURCE_URL
+      {
+        git remote add PR $PULL_REQUEST_SOURCE_URL
+      } || {
+        ret=$?
+        echo "Unable to fetch PR."
+        return $ret
+      }
       shippable_retry ssh-agent bash -c "ssh-add $SUBSCRIPTION_PRIVATE_KEY_PATH; git fetch PR"
     fi;
     git reset --hard $COMMIT_SHA

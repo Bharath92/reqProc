@@ -30,7 +30,13 @@ git_sync() {
   chmod 600 $PROJECT_KEY_LOCATION
   git config --global credential.helper store
 
-  ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git clone $PROJECT_CLONE_URL $PROJECT_CLONE_LOCATION"
+  {
+    ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git clone $PROJECT_CLONE_URL $PROJECT_CLONE_LOCATION"
+  } || {
+    ret=$?
+    echo "Unable to clone the repository. If this is a private repository, please make sure that the repository still contains Shippable's deploy key. If the deploy key is not present in the repository, you can use the \"Reset Project\" button on the project settings page to restore it."
+    return $ret
+  }
 
   echo "----> Pushing Directory $PROJECT_CLONE_LOCATION"
   pushd $PROJECT_CLONE_LOCATION

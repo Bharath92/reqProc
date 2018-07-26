@@ -39,7 +39,13 @@ git_sync() {
   chmod 600 $PROJECT_KEY_LOCATION
   git config --global credential.helper store
 
-  shippable_retry ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git clone $PROJECT_CLONE_URL $PROJECT_CLONE_LOCATION"
+  {
+    shippable_retry ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git clone $PROJECT_CLONE_URL $PROJECT_CLONE_LOCATION"
+  } || {
+    ret=$?
+    echo "Unable to clone the repository. If this is a private repository, please make sure that the repository still contains Shippable's deploy key. If the deploy key is not present in the repository, you can use the \"Reset Project\" button on the project settings page to restore it."
+    return $ret
+  }
 
   echo "----> Pushing Directory $PROJECT_CLONE_LOCATION"
   pushd $PROJECT_CLONE_LOCATION
@@ -50,7 +56,13 @@ git_sync() {
 
   echo "----> Checking out commit SHA"
   if [ "$IS_PULL_REQUEST" != false ]; then
-    shippable_retry ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git fetch origin pull/$PULL_REQUEST/head"
+    {
+      shippable_retry ssh-agent bash -c "ssh-add $PROJECT_KEY_LOCATION; git fetch origin pull/$PULL_REQUEST/head"
+    } || {
+      ret=$?
+      echo "Unable to fetch the repository. If this is a private repository, please make sure that the repository still contains Shippable's deploy key. If the deploy key is not present in the repository, you can use the \"Reset Project\" button on the project settings page to restore it."
+      return $ret
+    }
     git checkout -f FETCH_HEAD
     git merge origin/$PULL_REQUEST_BASE_BRANCH
   else
